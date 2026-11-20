@@ -1,0 +1,310 @@
+/* Вся компоновка боевого экрана задаётся здесь. Кликабельные элементы
+   явно включают pointer-events, остальной HUD пропускает ввод в canvas. */
+.hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  text-shadow: 0 2px 5px #07100b;
+  font-family: var(--display);
+  opacity: var(--hud-opacity);
+}
+.hud.hurt {
+  box-shadow: inset 0 0 9vw #b43329ab;
+}
+.hud-top,
+.hud-bottom {
+  position: absolute;
+  left: var(--gutter);
+  right: var(--gutter);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.hud-top {
+  top: 22px;
+}
+.mission,
+.match,
+.hud-pause,
+.perf,
+.fallback {
+  background: #15201ddc;
+  border: 1px solid var(--line);
+  border-radius: var(--corner);
+}
+.mission,
+.match {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 13px;
+  font: 600 11px var(--mono);
+  letter-spacing: 1px;
+}
+.mission b {
+  color: #869084;
+}
+.match {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 14px;
+}
+.match svg {
+  color: var(--accent);
+}
+.match i {
+  height: 17px;
+  border-right: 1px solid var(--line);
+}
+.match span {
+  font-weight: 400;
+}
+.hud-pause,
+.fallback button {
+  pointer-events: auto;
+}
+.hud-pause {
+  background: #15201ddc;
+  border: 1px solid var(--line);
+}
+.perf {
+  position: absolute;
+  left: var(--gutter);
+  top: 67px;
+  padding: 7px;
+  font: 11px var(--mono);
+  color: #e2e8c8;
+}
+.fallback {
+  pointer-events: auto;
+  position: absolute;
+  right: var(--gutter);
+  top: 69px;
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  padding: 8px;
+  font-size: 11px;
+}
+.fallback button {
+  border: 1px solid var(--line);
+  background: #3a463a;
+  color: var(--text);
+  padding: 6px;
+}
+.crosshair,
+.hitmark,
+.reload,
+.kill-msg {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+.crosshair {
+  width: 24px;
+  height: 24px;
+  --gap: 5px;
+  filter: drop-shadow(0 1px 1px #141a15);
+}
+.crosshair.wide {
+  --gap: 9px;
+}
+.crosshair b,
+.crosshair i {
+  position: absolute;
+  background: #fff9e9;
+}
+.crosshair b {
+  left: 11px;
+  top: 11px;
+  width: 2px;
+  height: 2px;
+}
+.crosshair i:nth-child(1),
+.crosshair i:nth-child(2) {
+  height: 1.5px;
+  width: 6px;
+  top: 11.5px;
+}
+.crosshair i:nth-child(1) {
+  right: calc(50% + var(--gap));
+}
+.crosshair i:nth-child(2) {
+  left: calc(50% + var(--gap));
+}
+.crosshair i:nth-child(3),
+.crosshair i:nth-child(4) {
+  width: 1.5px;
+  height: 6px;
+  left: 11.5px;
+}
+.crosshair i:nth-child(3) {
+  bottom: calc(50% + var(--gap));
+}
+.crosshair i:nth-child(4) {
+  top: calc(50% + var(--gap));
+}
+.crosshair.ads i {
+  opacity: 0;
+}
+.hitmark {
+  font: 28px var(--mono);
+  color: #ffb482;
+}
+.kill-msg,
+.reload {
+  top: 58%;
+  color: #ffe5bd;
+  font: 700 12px var(--mono);
+  background: #17201acd;
+  padding: 6px 11px;
+}
+.reload {
+  top: 64%;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--text);
+}
+.reload progress {
+  width: 56px;
+  height: 5px;
+  accent-color: var(--accent);
+}
+.hud-bottom {
+  bottom: 27px;
+  align-items: end;
+}
+.health-panel,
+.ammo-panel,
+.score-panel {
+  background: linear-gradient(105deg, #13201de8, #16201db3);
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  min-width: 145px;
+}
+.health-panel {
+  position: relative;
+}
+.health-panel em {
+  font: 10px var(--mono);
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 0;
+  white-space: nowrap;
+  background: #1c322adc;
+  padding: 4px 7px;
+}
+.micro {
+  font-size: 9px;
+  color: #d5d9c9;
+  letter-spacing: 1.4px;
+}
+.health-value b {
+  color: var(--accent);
+  font-size: 19px;
+  margin-right: 5px;
+}
+.health-value strong,
+.ammo-panel strong {
+  font: 750 36px/1.1 var(--display);
+}
+.health-value small,
+.ammo-panel small {
+  color: #d4d7c7;
+  font: 14px var(--mono);
+}
+.hp-track {
+  width: 100%;
+  height: 3px;
+  background: #626d5b;
+  margin-top: 4px;
+}
+.hp-track i {
+  height: 100%;
+  display: block;
+  background: var(--good);
+  transition: width 0.1s;
+}
+.score-panel {
+  text-align: center;
+  min-width: 64px;
+  padding: 8px 12px;
+}
+.score-panel b {
+  display: block;
+  font: 600 21px var(--mono);
+}
+.score-panel span {
+  font: 9px var(--mono);
+  letter-spacing: 1px;
+}
+.ammo-panel {
+  text-align: right;
+  min-width: 190px;
+}
+.ammo-panel b {
+  font: 14px var(--mono);
+  color: var(--accent);
+}
+.slots {
+  display: flex;
+  justify-content: flex-end;
+  gap: 5px;
+  margin-top: 4px;
+}
+.slots i {
+  font: 9px var(--mono);
+  padding: 1px 4px;
+}
+.slots .chosen {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.down {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  align-content: center;
+  justify-content: center;
+  text-align: center;
+  background: #14201cad;
+}
+.down span {
+  font: 12px var(--mono);
+  color: var(--accent);
+  letter-spacing: 2px;
+}
+.down h2 {
+  font-size: 36px;
+}
+@media (max-width: 620px) {
+  .mission {
+    display: none;
+  }
+  .hud-pause {
+    margin-left: auto;
+  }
+  .health-panel,
+  .ammo-panel {
+    min-width: 100px;
+    padding: 8px;
+  }
+  .hud-top,
+  .hud-bottom {
+    left: 12px;
+    right: 12px;
+  }
+  .hud-bottom {
+    bottom: 12px;
+  }
+  .fallback {
+    top: 61px;
+  }
+  .score-panel {
+    min-width: 46px;
+  }
+}
