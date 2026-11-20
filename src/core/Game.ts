@@ -94,6 +94,7 @@ export class Game implements GameClient {
   private pause() {
     if (this.mode !== 'playing') return;
     this.mode = 'paused';
+    this.sim.armory.clearTrigger();
     this.input?.release();
     this.sound.setPlaying(false);
     this.accumulated = 0;
@@ -162,7 +163,7 @@ export class Game implements GameClient {
       weaponCount: WEAPONS.length,
       reserve: a.spare,
       reloading: a.reloadLeft > 0,
-      reloadProgress: a.reloadLeft ? Math.round((1 - a.reloadLeft / a.spec.reload) * 20) * 5 : 0,
+      reloadProgress: Math.round(a.reloadProgress * 100),
       ads: p.ads,
       sprinting: p.sprinting,
       hit: s.hitLeft > 0,

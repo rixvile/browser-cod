@@ -30,7 +30,7 @@ export class AudioManager {
         this.effects.connect(this.master);
         this.music.connect(this.master);
         this.master.connect(c.destination);
-        const length = Math.floor(c.sampleRate * 0.22);
+        const length = Math.floor(c.sampleRate * 0.4);
         this.noise = c.createBuffer(1, length, c.sampleRate);
         const data = this.noise.getChannelData(0);
         for (let i = 0; i < length; i++) data[i] = Math.random() * 2 - 1;
@@ -88,14 +88,16 @@ export class AudioManager {
       g = c.createGain();
     s.buffer = this.noise;
     f.type = 'lowpass';
-    f.frequency.value = slot === 2 ? 1600 : 2700;
-    const d = slot === 2 ? 0.17 : 0.09;
+    const d = [0.105, 0.075, 0.19][slot];
+    const brightness = [3400, 4700, 2350][slot] * (0.93 + Math.random() * 0.14);
+    f.frequency.setValueAtTime(brightness, t);
+    f.frequency.exponentialRampToValueAtTime(brightness * 0.21, t + d);
     g.gain.setValueAtTime(0.22, t);
     g.gain.exponentialRampToValueAtTime(0.0001, t + d);
     s.connect(f);
     f.connect(g);
     g.connect(this.effects);
-    s.start(t);
+    s.start(t, Math.random() * 0.12);
     s.stop(t + d);
     s.onended = () => {
       s.disconnect();
@@ -107,12 +109,15 @@ export class AudioManager {
     if (!this.ctx || this.ctx.state !== 'running') return;
     if (e.type === 'shot') {
       this.burst(e.slot);
-      this.tone(WEAPONS[e.slot].soundHz, 43, 0.12, 0.19, 'triangle');
+      const weight = WEAPONS[e.slot].flash;
+      this.tone(WEAPONS[e.slot].soundHz * (0.96 + Math.random() * 0.08), 43, 0.11 * weight, 0.17, 'triangle');
     } else if (e.type === 'enemyShot') this.tone(122, 64, 0.08, 0.048, 'triangle');
     else if (e.type === 'hit' || e.type === 'kill')
       this.tone(e.type === 'kill' ? 840 : 560, e.type === 'kill' ? 1190 : 680, 0.085, 0.075);
     else if (e.type === 'hurt' || e.type === 'death') this.tone(130, 48, 0.15, 0.11, 'triangle');
-    else if (e.type === 'reload' || e.type === 'equip') this.tone(340, 180, 0.055, 0.05, 'square');
+    else if (e.type === 'empty') this.tone(680, 250, 0.022, 0.043, 'triangle');
+    else if (e.type === 'load') this.tone(310, 95, 0.06, 0.08, 'triangle');
+    else if (e.type === 'reload' || e.type === 'equip') this.tone(430, 170, 0.04, 0.04, 'triangle');
     else if (e.type === 'spawn') this.tone(260, 620, 0.23, 0.09);
   }
   dispose(): void {

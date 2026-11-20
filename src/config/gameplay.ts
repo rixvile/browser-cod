@@ -55,6 +55,7 @@ export interface WeaponSpec {
   magazine: number;
   reserve: number;
   reload: number;
+  reloadStyle: 'magazine' | 'single';
   pellets: number;
   spread: number;
   adsSpread: number;
@@ -78,6 +79,7 @@ export const WEAPONS: readonly WeaponSpec[] = [
     magazine: 30,
     reserve: 150,
     reload: 1.55,
+    reloadStyle: 'magazine',
     pellets: 1,
     spread: 0.01,
     adsSpread: 0.3,
@@ -93,10 +95,11 @@ export const WEAPONS: readonly WeaponSpec[] = [
     name: 'S-4 Spark',
     kind: 'Пистолет',
     damage: 49,
-    interval: 0.27,
+    interval: 0.23,
     magazine: 12,
     reserve: 72,
     reload: 1.1,
+    reloadStyle: 'magazine',
     pellets: 1,
     spread: 0.007,
     adsSpread: 0.34,
@@ -115,7 +118,8 @@ export const WEAPONS: readonly WeaponSpec[] = [
     interval: 0.77,
     magazine: 6,
     reserve: 36,
-    reload: 2.05,
+    reload: 0.46,
+    reloadStyle: 'single',
     pellets: 8,
     spread: 0.072,
     adsSpread: 0.66,

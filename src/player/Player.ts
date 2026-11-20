@@ -31,6 +31,37 @@ export class Player {
   pos: Vec3;
   yaw: number;
   pitch = 0;
+  // Смещение от выстрела хранится отдельно от направления, заданного мышью.
+  private lift = 0;
+  private drift = 0;
+  private liftSpeed = 0;
+  private driftSpeed = 0;
+  focus = 0;
+  bloom = 0;
+  get aimPitch() {
+    return clamp(this.pitch + this.lift, -1.42, 1.42);
+  }
+  get aimYaw() {
+    return this.yaw + this.drift;
+  }
+  kick(amount: number, sideways: number) {
+    const impulse = amount * (1 - 0.35 * this.focus) * (1 + 0.23 * this.bloom);
+    this.liftSpeed += impulse * 34;
+    this.driftSpeed += impulse * sideways * 9;
+    this.bloom = Math.min(1.6, this.bloom + 0.55);
+  }
+  /** Затухающая пружина возвращает только отдачу. Поворот мышью сохраняется. */
+  private settle(dt: number) {
+    const rate = 12;
+    const decay = Math.exp(-rate * dt);
+    const vertical = this.liftSpeed + rate * this.lift;
+    const lateral = this.driftSpeed + rate * this.drift;
+    this.lift = (this.lift + vertical * dt) * decay;
+    this.drift = (this.drift + lateral * dt) * decay;
+    this.liftSpeed = (this.liftSpeed - rate * vertical * dt) * decay;
+    this.driftSpeed = (this.driftSpeed - rate * lateral * dt) * decay;
+    this.bloom *= Math.exp(-3.2 * dt);
+  }
   vy = 0;
   grounded = true;
   crouched = false;
@@ -58,9 +89,11 @@ export class Player {
   }
   /** Нормализация диагонали сохраняет скорость. Сидящий игрок может встать,
    * только если для полного коллайдера достаточно свободного пространства. */
-  step(input: InputFrame, dt: number): void {
+  step(input: InputFrame, dt: number, reloading = false): void {
+    this.settle(dt);
     this.crouched = input.crouch || (this.crouched && !fits(this.pos, PLAYER.radius, PLAYER.height));
-    this.ads = input.ads;
+    this.ads = input.ads && !reloading;
+    this.focus += (Number(this.ads) - this.focus) * (1 - Math.exp(-14 * dt));
     this.sprinting = input.sprint && input.forward > 0 && !this.crouched && !this.ads;
     this.yaw -= input.turn * dt * 1.65;
     const speed = this.crouched ? PLAYER.crouch : this.sprinting ? PLAYER.sprint : PLAYER.walk;

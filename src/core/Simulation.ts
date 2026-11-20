@@ -8,14 +8,14 @@ import { BOT, HEAD_FACTOR, RULES } from '../config/gameplay.ts';
 import { Player, type InputFrame } from '../player/Player.ts';
 import { Armory } from '../weapons/Armory.ts';
 import { PLAYER_SPAWNS, type Vec3 } from '../world/map.ts';
-import { clamp, direction, distance } from '../world/physics.ts';
+import { direction, distance } from '../world/physics.ts';
 import { Bots, botEye } from '../ai/Bots.ts';
 import { Navigation } from '../ai/Navigation.ts';
 import { trace } from '../combat/hitscan.ts';
 export type GameEvent =
   | { type: 'shot'; slot: number; from: Vec3; to: Vec3 }
   | { type: 'enemyShot'; from: Vec3; to: Vec3 }
-  | { type: 'hit' | 'kill' | 'hurt' | 'reload' | 'spawn' | 'death' | 'equip'; head?: boolean };
+  | { type: 'hit' | 'kill' | 'hurt' | 'load' | 'empty' | 'reload' | 'spawn' | 'death' | 'equip'; head?: boolean };
 export type Emit = (e: GameEvent) => void;
 export class Simulation {
   player: Player;
@@ -52,12 +52,13 @@ export class Simulation {
     const gun = this.armory.spec,
       p = this.player,
       o = p.eye;
-    const spread = gun.spread * (p.ads ? gun.adsSpread : 1) * (p.sprinting ? 1.8 : 1);
+    const motion = !p.grounded ? 2 : p.sprinting ? 1.8 : p.moving ? 1.22 : p.crouched ? 0.87 : 1;
+    const spread = gun.spread * (1 - p.focus * (1 - gun.adsSpread)) * motion * (1 + p.bloom * 0.7);
     let landed = false;
     for (let i = 0; i < gun.pellets; i++) {
       const a = this.random() * Math.PI * 2,
         r = Math.sqrt(this.random()) * spread;
-      const v = direction(p.yaw + Math.cos(a) * r, p.pitch + Math.sin(a) * r);
+      const v = direction(p.aimYaw + Math.cos(a) * r, p.aimPitch + Math.sin(a) * r);
       const hit = trace(o, v, this.bots.units);
       if (i === 0) this.emit({ type: 'shot', slot: this.armory.slot, from: o, to: hit.end });
       if (!hit.target) continue;
@@ -73,7 +74,7 @@ export class Simulation {
     }
     this.shots++;
     if (landed) this.hits++;
-    p.pitch = clamp(p.pitch + gun.recoil * (p.ads ? 0.66 : 1), -1.42, 1.42);
+    p.kick(gun.recoil, this.random() * 2 - 1);
   }
   /** Все попадания ботов проходят здесь. Несколько выстрелов за один шаг
    * могут вызвать только одну смерть и только один запуск таймера возрождения. */
@@ -109,9 +110,12 @@ export class Simulation {
     this.hurtLeft = Math.max(0, this.hurtLeft - dt);
     this.killLeft = Math.max(0, this.killLeft - dt);
     if (this.player.health > 0) {
-      this.player.step(input, dt);
-      this.armory.tick(dt);
-      if (input.pressed || (input.fire && this.armory.spec.automatic)) this.shoot();
+      this.armory.tick(dt, () => this.emit({ type: 'load' }));
+      this.player.step(input, dt, this.armory.reloadLeft > 0);
+      if (this.armory.wantsShot(input.pressed, input.fire)) {
+        if (this.armory.ammo > 0) this.shoot();
+        else if (input.pressed) this.emit({ type: 'empty' });
+      }
     } else if ((this.player.respawnLeft -= dt) <= 0) this.respawn();
     if (this.kills >= RULES.goal || this.remaining <= 0) {
       this.ended = true;

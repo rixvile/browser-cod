@@ -27,7 +27,8 @@ export class ArenaView {
   private traceIndex = 0;
   private flashTime = 0;
   private kick = 0;
-  private blend = 0;
+  private loadPulse = 0;
+  private reloadPose = 0;
   private clock = 0;
   private eyeY = NaN;
   private settings: Settings;
@@ -146,21 +147,26 @@ export class ArenaView {
     this.eyeY = NaN;
     this.kick = 0;
     this.flashTime = 0;
-    this.blend = 0;
+    this.reloadPose = this.loadPulse = 0;
     for (const t of this.traces) {
       t.time = 0;
       t.mesh.visible = false;
     }
   }
   onEvent(e: GameEvent): void {
-    if (e.type === 'spawn') {
-      this.eyeY = NaN;
+    if (e.type === 'spawn' || e.type === 'equip') {
+      if (e.type === 'spawn') this.eyeY = NaN;
+      this.kick = this.flashTime = this.reloadPose = this.loadPulse = 0;
+      return;
+    }
+    if (e.type === 'load') {
+      this.loadPulse = 1;
       return;
     }
     if (e.type !== 'shot' && e.type !== 'enemyShot') return;
     if (e.type === 'shot') {
-      this.kick = 1;
-      this.flashTime = 0.064;
+      this.kick = Math.min(1.7, this.kick * 0.35 + WEAPONS[e.slot].flash);
+      this.flashTime = 0.042;
     }
     if (this.settings.fx === 'low') return;
     const t = this.traces[this.traceIndex++ % this.traces.length],
@@ -188,24 +194,25 @@ export class ArenaView {
     this.eyeY = T.MathUtils.damp(this.eyeY, target, 17, dt);
     const sway = p.moving && p.grounded ? Math.sin(p.bob) * 0.018 : 0;
     this.camera.position.set(eye.x, this.eyeY + sway, eye.z);
-    this.camera.rotation.set(p.pitch + this.kick * 0.007, p.yaw, this.kick * 0.006, 'YXZ');
-    this.blend = T.MathUtils.damp(this.blend, p.ads ? 1 : 0, 15, dt);
-    const fov = this.settings.fov * (1 - this.blend * (1 - sim.armory.spec.zoom));
+    this.camera.rotation.set(p.aimPitch, p.aimYaw, 0, 'YXZ');
+    const blend = p.focus;
+    const fov = this.settings.fov * (1 - blend * (1 - sim.armory.spec.zoom));
     this.setFov(fov, dt);
     const g = this.gear[sim.armory.slot];
     this.gear.forEach((o) => {
       o.root.visible = o === g;
     });
-    const reload =
-      sim.armory.reloadLeft > 0
-        ? Math.sin((1 - sim.armory.reloadLeft / sim.armory.spec.reload) * Math.PI)
-        : 0;
+    const progress = sim.armory.reloadProgress;
+    const lower = T.MathUtils.smoothstep(progress, 0, 0.24);
+    const raise = T.MathUtils.smoothstep(progress, 0.73, 1);
+    this.reloadPose = T.MathUtils.damp(this.reloadPose, lower * (1 - raise), 22, dt);
+    const reload = this.reloadPose;
     this.rig.position.set(
-      0.238 * (1 - this.blend) + sway * (1 - this.blend),
-      -0.202 + 0.077 * this.blend - reload * 0.18 + Math.abs(sway) * 0.45,
-      -0.69 + 0.21 * this.blend + this.kick * 0.05,
+      0.238 * (1 - blend) + sway * (1 - blend),
+      -0.202 + 0.077 * blend - reload * 0.14 + this.loadPulse * 0.018 + Math.abs(sway) * 0.45,
+      -0.69 + 0.21 * blend + this.kick * 0.05,
     );
-    this.rig.rotation.set(this.kick * 0.055 - reload * 0.26, reload * 0.19, -reload * 0.41);
+    this.rig.rotation.set(this.kick * 0.075 - reload * 0.26 + this.loadPulse * 0.05, reload * 0.19, -reload * 0.41);
     this.flash.position.copy(g.muzzle.position);
     this.flash.scale.set(0.7, 0.74, sim.armory.spec.flash * (1 + this.kick));
     this.flash.rotation.z = this.clock * 75;
@@ -250,7 +257,8 @@ export class ArenaView {
     }
     this.lastDraws = this.renderer.info.render.calls;
     if (active) {
-      this.kick = Math.max(0, this.kick - dt * 9);
+      this.kick *= Math.exp(-16 * dt);
+      this.loadPulse *= Math.exp(-12 * dt);
       this.flashTime = Math.max(0, this.flashTime - dt);
       for (const t of this.traces) {
         if (t.time > 0) {

@@ -125,3 +125,43 @@ test('по истечении времени состояние заморажи
   s.step(1, { ...NEUTRAL, pressed: true });
   assert.equal(s.armory.ammo, 30);
 });
+
+test('смена после вставки сохраняет магазин, до вставки сохраняет резерв', () => {
+  for (const inserted of [false, true]) {
+    const a = new Armory();
+    a.magazines[0] = 0;
+    a.reload();
+    a.tick(a.spec.reload * (inserted ? 0.75 : 0.4));
+    assert.ok(a.reloadLeft > 0);
+    assert.equal(a.fire(), false);
+    a.equip(1);
+    a.equip(0);
+    a.tick(3);
+    assert.equal(a.ammo, inserted ? 30 : 0);
+    assert.equal(a.ammo + a.spare, 150);
+  }
+});
+
+test('длинный шаг дробовика ограничен запасом и даёт по событию на патрон', () => {
+  const a = new Armory();
+  a.equip(2);
+  a.magazines[2] = 1;
+  a.reserves[2] = 3;
+  let loads = 0;
+  a.reload();
+  a.tick(4, () => loads++);
+  assert.deepEqual([a.ammo, a.spare, loads, a.reloadLeft], [4, 0, 3, 0]);
+});
+
+test('смена слота не сбрасывает оставшуюся задержку выстрела', () => {
+  const a = new Armory();
+  a.equip(2);
+  a.tick(0.2);
+  assert.ok(a.fire());
+  a.equip(1);
+  a.equip(2);
+  a.tick(0.2);
+  assert.equal(a.fire(), false);
+  a.tick(0.6);
+  assert.ok(a.fire());
+});

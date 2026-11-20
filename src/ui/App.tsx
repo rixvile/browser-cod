@@ -139,7 +139,7 @@ export function App({ client }: { client: GameClient }) {
                 Автомат, пистолет и дробовик доступны с начала матча. Попадание в оптический модуль дрона
                 приносит дополнительные очки.
               </p>
-              <small>Browser COD · версия 0.1.0</small>
+              <small>Browser COD · версия 0.1.1</small>
             </div>
           )}
         </section>

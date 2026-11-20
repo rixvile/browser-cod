@@ -84,3 +84,61 @@ test('новая тренировка получает независимые м
   assert.ok(previous.armory.reloadLeft > 0);
   assert.notStrictEqual(previous.armory.magazines, fresh.armory.magazines);
 });
+
+test('ранний клик пистолета даёт один следующий выстрел, без автоповтора', () => {
+  const s = new Simulation(nav);
+  s.equip(1);
+  tick(s, 0.25);
+  const tap = { ...NEUTRAL, pressed: true };
+  s.step(1 / 60, tap);
+  s.step(1 / 60, tap); // Слишком рано для второго выстрела.
+  tick(s, 10 / 60);
+  assert.equal(s.shots, 1);
+  s.step(1 / 60, tap);
+  assert.equal(s.shots, 1);
+  tick(s, 3 / 60);
+  assert.equal(s.shots, 2);
+  tick(s, 0.4, { ...NEUTRAL, fire: true });
+  assert.equal(s.shots, 2);
+});
+
+test('последующие лучи следуют отдаче, мышь задаёт точку возврата', () => {
+  const shots = [];
+  const s = new Simulation(nav, e => { if (e.type === 'shot') shots.push(e); }, () => 0);
+  const tap = { ...NEUTRAL, pressed: true };
+  s.step(1 / 60, tap);
+  tick(s, 0.14);
+  assert.ok(s.player.aimPitch > s.player.pitch);
+  s.step(1 / 60, tap);
+  const shot = shots[1];
+  const distance = Math.hypot(shot.to.x-shot.from.x, shot.to.z-shot.from.z);
+  assert.ok(Math.abs(Math.atan2(shot.to.y-shot.from.y, distance) - s.player.aimPitch) < 1e-6);
+  s.player.look(30, -40, 1);
+  tick(s, 1.5);
+  assert.ok(Math.abs(s.player.aimPitch - s.player.pitch) < 1e-5);
+  assert.ok(Math.abs(s.player.aimYaw - s.player.yaw) < 1e-5);
+});
+
+test('дробовик можно прервать после первого патрона, пауза между шагами не добавляет боезапас', () => {
+  const log = [];
+  const s = new Simulation(nav, e => log.push(e.type));
+  s.equip(2);
+  s.armory.magazines[2] = 0;
+  s.reload();
+  tick(s, 0.3);
+  s.step(1 / 60, { ...NEUTRAL, pressed: true });
+  assert.equal(s.shots, 0);
+  tick(s, 0.39);
+  assert.equal(s.armory.ammo, 1);
+  assert.equal(s.armory.spare, 35);
+  assert.ok(s.armory.reloadLeft > 0);
+  s.step(1 / 60, { ...NEUTRAL, pressed: true });
+  assert.equal(s.shots, 1);
+  assert.equal(s.armory.reloadLeft, 0);
+  tick(s, 0.9);
+  assert.equal(s.armory.ammo, 0);
+  assert.equal(log.filter(t => t === 'load').length, 1);
+  s.step(1 / 60, { ...NEUTRAL, pressed: true, fire: true });
+  tick(s, 0.3, { ...NEUTRAL, fire: true });
+  assert.equal(log.filter(t => t === 'empty').length, 1);
+});
