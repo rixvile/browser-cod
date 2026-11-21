@@ -62,7 +62,7 @@ export interface WeaponSpec {
   recoil: number;
   zoom: number;
   automatic: boolean;
-  soundHz: number;
+  report: 'rifle' | 'suppressedPistol' | 'shotgun';
   flash: number;
   color: string;
 }
@@ -86,7 +86,7 @@ export const WEAPONS: readonly WeaponSpec[] = [
     recoil: 0.011,
     zoom: 0.73,
     automatic: true,
-    soundHz: 155,
+    report: 'rifle',
     flash: 1,
     color: '#67736b',
   },
@@ -106,7 +106,7 @@ export const WEAPONS: readonly WeaponSpec[] = [
     recoil: 0.02,
     zoom: 0.83,
     automatic: false,
-    soundHz: 235,
+    report: 'suppressedPistol',
     flash: 0.72,
     color: '#69868a',
   },
@@ -126,7 +126,7 @@ export const WEAPONS: readonly WeaponSpec[] = [
     recoil: 0.044,
     zoom: 0.88,
     automatic: false,
-    soundHz: 85,
+    report: 'shotgun',
     flash: 1.55,
     color: '#a06344',
   },

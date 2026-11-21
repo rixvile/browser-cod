@@ -139,7 +139,17 @@ export function App({ client }: { client: GameClient }) {
                 Автомат, пистолет и дробовик доступны с начала матча. Попадание в оптический модуль дрона
                 приносит дополнительные очки.
               </p>
-              <small>Browser COD · версия 0.1.1</small>
+              <small>Browser COD · версия 0.1.2</small>
+              <details>
+                <summary>Авторы записей выстрелов</summary>
+                <p>Винтовка — qubodup. Дробовик — michorvath. Обе записи под лицензией CC0.</p>
+                <p>
+                  <a href="https://freesound.org/people/Astronaut77890/sounds/714332/" target="_blank" rel="noreferrer">P226- Suppressed Gunshot</a>
+                  {' '}— Astronaut77890,{' '}
+                  <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a>.
+                  Для игры выстрел обрезан, сведён в моно и обработан по громкости.
+                </p>
+              </details>
             </div>
           )}
         </section>

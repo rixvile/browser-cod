@@ -1,11 +1,17 @@
-/**
- * Собственные короткие сигналы Web Audio. Контекст создаётся по жесту пользователя.
- * Музыкальная и событийная шины управляются независимо. Во время паузы
- * фон затихает. Для замены синтеза сэмплами достаточно сохранить onEvent().
- */
+/** Записанные выстрелы и синтез интерфейса проходят через общую громкость эффектов. */
 import { WEAPONS } from '../config/gameplay.ts';
 import type { GameEvent } from '../core/Simulation.ts';
 import type { Settings } from '../config/settings.ts';
+import rifle from './recordings/rifle.wav?inline';
+import pistol from './recordings/suppressed-pistol.wav?inline';
+import shotgun from './recordings/shotgun.wav?inline';
+
+const reports = {
+  rifle: { url: rifle, gain: 0.53 },
+  suppressedPistol: { url: pistol, gain: 0.22 },
+  shotgun: { url: shotgun, gain: 0.70 },
+};
+
 export class AudioManager {
   private ctx?: AudioContext;
   private master?: GainNode;
@@ -13,7 +19,8 @@ export class AudioManager {
   private music?: GainNode;
   private active = false;
   private settings: Settings;
-  private noise?: AudioBuffer;
+  private readonly recordings = new Map<string, Promise<AudioBuffer | null>>();
+  private session = 0;
   constructor(s: Settings) {
     this.settings = s;
   }
@@ -30,10 +37,16 @@ export class AudioManager {
         this.effects.connect(this.master);
         this.music.connect(this.master);
         this.master.connect(c.destination);
-        const length = Math.floor(c.sampleRate * 0.4);
-        this.noise = c.createBuffer(1, length, c.sampleRate);
-        const data = this.noise.getChannelData(0);
-        for (let i = 0; i < length; i++) data[i] = Math.random() * 2 - 1;
+        // Vite встраивает WAV и для сайта, и для PLAY.html. Декодируем один раз.
+        for (const [name, report] of Object.entries(reports)) {
+          const encoded = report.url.slice(report.url.indexOf(',') + 1);
+          const bytes = Uint8Array.from(atob(encoded), char => char.charCodeAt(0));
+          const decoded = c.decodeAudioData(bytes.buffer).catch(error => {
+            console.warn('Relay Shift: ошибка декодирования звука', name, error);
+            return null;
+          });
+          this.recordings.set(name, decoded);
+        }
         for (const hz of [55, 82.4, 110.3]) {
           const n = c.createOscillator();
           n.type = 'sine';
@@ -56,6 +69,7 @@ export class AudioManager {
     this.music?.gain.setTargetAtTime(this.active ? s.music * 0.035 : 0, t, 0.12);
   }
   setPlaying(on: boolean): void {
+    if (this.active !== on) this.session++;
     this.active = on;
     this.apply(this.settings);
   }
@@ -79,39 +93,35 @@ export class AudioManager {
       gain.disconnect();
     };
   }
-  private burst(slot: number) {
-    const c = this.ctx;
-    if (!c || !this.effects || !this.noise) return;
-    const t = c.currentTime,
-      s = c.createBufferSource(),
-      f = c.createBiquadFilter(),
-      g = c.createGain();
-    s.buffer = this.noise;
-    f.type = 'lowpass';
-    const d = [0.105, 0.075, 0.19][slot];
-    const brightness = [3400, 4700, 2350][slot] * (0.93 + Math.random() * 0.14);
-    f.frequency.setValueAtTime(brightness, t);
-    f.frequency.exponentialRampToValueAtTime(brightness * 0.21, t + d);
-    g.gain.setValueAtTime(0.22, t);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + d);
-    s.connect(f);
-    f.connect(g);
-    g.connect(this.effects);
-    s.start(t, Math.random() * 0.12);
-    s.stop(t + d);
-    s.onended = () => {
-      s.disconnect();
-      f.disconnect();
-      g.disconnect();
+  private async playShot(slot: number) {
+    const ctx = this.ctx;
+    const effects = this.effects;
+    if (!ctx || !effects || !this.active) return;
+    const name = WEAPONS[slot].report;
+    const session = this.session;
+    const buffer = await this.recordings.get(name);
+    if (!buffer || session !== this.session || ctx.state === 'closed') return;
+    // Свой источник на выстрел позволяет естественно наложить хвосты в очереди.
+    const voice = ctx.createBufferSource();
+    const level = ctx.createGain();
+    voice.buffer = buffer;
+    voice.playbackRate.value = 0.987 + Math.random() * 0.026;
+    level.gain.value = reports[name].gain;
+    voice.connect(level);
+    level.connect(effects);
+    voice.onended = () => {
+      voice.disconnect();
+      level.disconnect();
     };
+    voice.start();
   }
   onEvent(e: GameEvent): void {
-    if (!this.ctx || this.ctx.state !== 'running') return;
     if (e.type === 'shot') {
-      this.burst(e.slot);
-      const weight = WEAPONS[e.slot].flash;
-      this.tone(WEAPONS[e.slot].soundHz * (0.96 + Math.random() * 0.08), 43, 0.11 * weight, 0.17, 'triangle');
-    } else if (e.type === 'enemyShot') this.tone(122, 64, 0.08, 0.048, 'triangle');
+      void this.playShot(e.slot);
+      return;
+    }
+    if (!this.ctx || this.ctx.state !== 'running') return;
+    if (e.type === 'enemyShot') this.tone(122, 64, 0.08, 0.048, 'triangle');
     else if (e.type === 'hit' || e.type === 'kill')
       this.tone(e.type === 'kill' ? 840 : 560, e.type === 'kill' ? 1190 : 680, 0.085, 0.075);
     else if (e.type === 'hurt' || e.type === 'death') this.tone(130, 48, 0.15, 0.11, 'triangle');
@@ -121,6 +131,8 @@ export class AudioManager {
     else if (e.type === 'spawn') this.tone(260, 620, 0.23, 0.09);
   }
   dispose(): void {
+    this.session++;
+    this.recordings.clear();
     if (this.ctx) void this.ctx.close().catch(() => {});
   }
 }

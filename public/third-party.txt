@@ -1,3 +1,17 @@
+Relay Shift — weapon recordings
+
+Rifle Shooting — qubodup, Freesound, CC0 1.0.
+https://freesound.org/people/qubodup/sounds/238916/
+20 gauge shotgun gunshot — michorvath, Freesound, CC0 1.0.
+https://freesound.org/people/michorvath/sounds/427595/
+CC0: https://creativecommons.org/publicdomain/zero/1.0/
+
+P226- Suppressed Gunshot — Astronaut77890, Freesound, CC BY 4.0.
+https://freesound.org/people/Astronaut77890/sounds/714332/
+License: https://creativecommons.org/licenses/by/4.0/
+All three excerpts were trimmed from the public HQ previews, mixed to mono,
+resampled, gain-adjusted and faded at the boundaries for Relay Shift.
+
 ### three
 The MIT License
 
